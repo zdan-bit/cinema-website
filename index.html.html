@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dedan (Panda Cinema)</title>
+    <style>
+        :root {
+            --bg: #030712;
+            --card-w: 220px;
+            --card-h: 330px;
+            --accent: #00f0ff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: #fff;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .stars-bg {
+            position: fixed;
+            inset: 0;
+            background: 
+                radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.8), var(--bg) 85%),
+                radial-gradient(2px 2px at 20px 30px, #fff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 40px 70px, rgba(0, 240, 255, 0.8), rgba(0,0,0,0));
+            background-size: 100% 100%, 150px 150px, 200px 200px;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            padding: 1.2rem 1rem 0.8rem 1rem;
+            text-align: center;
+            z-index: 10;
+            background: rgba(3, 7, 18, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        header h1 {
+            font-size: 1.6rem;
+            font-weight: 900;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, #fff 20%, var(--accent) 80%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 0.5rem;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .search-input {
+            flex: 1;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            padding: 0.55rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            outline: none;
+            transition: border-color 0.25s, box-shadow 0.25s;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+        }
+
+        .search-btn {
+            background: var(--accent);
+            color: #030712;
+            border: none;
+            padding: 0.55rem 1.2rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .search-btn:hover {
+            transform: scale(1.03);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+        }
+
+        .categories-wrapper {
+            display: flex;
+            gap: 0.6rem;
+            overflow-x: auto;
+            padding: 0.3rem 0 0.2rem 0;
+            justify-content: flex-start;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            scrollbar-width: none;
+        }
+
+        .cat-btn {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #94a3b8;
+            padding: 0.45rem 1rem;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .cat-btn.active, .cat-btn:hover {
+            color: #fff;
+            background: rgba(0, 240, 255, 0.2);
+            border-color: var(--accent);
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+        }
+
+        .stage {
+            position: relative;
+            z-index: 2;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(var(--card-w), 1fr));
+            gap: 1.8rem;
+            justify-items: center;
+        }
+
+        .loader {
+            position: absolute;
+            top: 40vh;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--accent);
+            font-size: 0.85rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            z-index: 2;
+        }
+
+        .card {
+            position: relative;
+            width: var(--card-w);
+            height: var(--card-h);
+            border-radius: 12px;
+            overflow: hidden;
+            background: #0f172a;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s, border-color 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-6px) scale(1.02);
+            border-color: var(--accent);
+            box-shadow: 0 18px 36px rgba(0, 240, 255, 0.25);
+        }
+
+        .card-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .play-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(3, 7, 18, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 3;
+        }
+
+        .card:hover .play-overlay {
+            opacity: 1;
+        }
+
+        .play-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 18px rgba(0, 240, 255, 0.6);
+        }
+
+        .play-icon {
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 9px 0 9px 16px;
+            border-color: transparent transparent transparent #030712;
+            margin-left: 3px;
+        }
+
+        .card-info {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(3, 7, 18, 0.95) 0%, transparent 60%);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 1rem;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .badge {
+            align-self: flex-start;
+            font-size: 0.6rem;
+            font-weight: 800;
+            padding: 3px 6px;
+            border-radius: 4px;
+            background: rgba(0, 240, 255, 0.15);
+            color: var(--accent);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            margin-bottom: 0.3rem;
+        }
+
+        .title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            line-height: 1.2;
+            color: #fff;
+        }
+
+        .meta {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 0.2rem;
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(3, 7, 18, 0.96);
+            backdrop-filter: blur(12px);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            width: 94%;
+            max-width: 1100px;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(0, 240, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header {
+            padding: 0.8rem 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0f172a;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .modal-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .action-btn, select.action-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            padding: 0.35rem 0.65rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        select.action-btn option {
+            background: #0f172a;
+            color: #fff;
+        }
+
+        .action-btn:hover {
+            background: var(--accent);
+            color: #030712;
+        }
+
+        .playback-controls {
+            display: flex;
+            gap: 0.3rem;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.9);
+            padding: 0.2rem 0.4rem;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .ep-controls {
+            display: none;
+            gap: 0.4rem;
+            align-items: center;
+            background: rgba(0, 240, 255, 0.08);
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+        }
+
+        .ep-controls.visible {
+            display: flex;
+        }
+
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            background: #000;
+        }
+
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .video-container iframe.paused {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .pause-banner {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(3, 7, 18, 0.65);
+            color: var(--accent);
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 10;
+        }
+
+        .pause-banner.active {
+            opacity: 1;
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        .volume-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(3, 7, 18, 0.85);
+            color: var(--accent);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            z-index: 12;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .volume-badge.active {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="stars-bg"></div>
+
+    <header>
+        <h1>Dedan (Panda Cinema)</h1>
+
+        <div class="search-box">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search any movie, series, or anime...">
+            <button id="searchBtn" class="search-btn">Search</button>
+        </div>
+
+        <div class="categories-wrapper" id="catWrapper"></div>
+    </header>
+
+    <div class="loader" id="loader">Fetching TMDB Vault...</div>
+
+    <main class="stage">
+        <div class="grid" id="grid"></div>
+    </main>
+
+    <div class="modal" id="videoModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span style="font-weight: 700; font-size: 0.95rem;" id="modalTitle">Now Playing</span>
+                <div class="modal-controls">
+                    <!-- Playback Controls + Sound Toggle -->
+                    <div class="playback-controls">
+                        <button class="action-btn" id="volumeBtn" title="Toggle Sound (M)">?? Sound</button>
+                        <button class="action-btn" id="rewindBtn" title="Rewind 10s">? -10s</button>
+                        <button class="action-btn" id="playPauseBtn" title="Play/Pause (Space)">? Pause</button>
+                        <button class="action-btn" id="forwardBtn" title="Fast-Forward 10s">? +10s</button>
+                    </div>
+
+                    <div class="ep-controls" id="epControls">
+                        <label style="font-size: 0.7rem; color: var(--accent);">S:</label>
+                        <select class="action-btn" id="seasonSelect"></select>
+                        <label style="font-size: 0.7rem; color: var(--accent);">E:</label>
+                        <select class="action-btn" id="episodeSelect"></select>
+                    </div>
+
+                    <label style="font-size: 0.75rem; color: #94a3b8;">Server:</label>
+                    <select class="action-btn" id="serverSelect">
+                        <option value="vidsrc_me">Server 1 (VidSrc)</option>
+                        <option value="vidsrc_pro">Server 2 (Pro)</option>
+                        <option value="embedmaster">Server 3 (EmbedMaster)</option>
+                        <option value="embed_2embed">Server 4 (2Embed)</option>
+                    </select>
+                    <button class="action-btn" id="fullScreenBtn">? Fullscreen</button>
+                    <button class="action-btn" id="closeModal" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4);">? Close</button>
+                </div>
+            </div>
+            <div class="video-container">
+                <div class="volume-badge" id="volumeBadge">?? Sound Muted</div>
+                <div class="pause-banner" id="pauseBanner">? Click to Resume</div>
+                <iframe id="streamIframe" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; sound; volume"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TMDB_API_KEY = '8265bd1679663a7ea12ac168da84d2e8';
+
+        const categories = [
+            { name: 'Trending', type: 'trending' },
+            { name: 'Sci-Fi', genreId: 878, type: 'movie' },
+            { name: 'Horror', genreId: 27, type: 'movie' },
+            { name: 'Comedy', genreId: 35, type: 'movie' },
+            { name: 'Action', genreId: 28, type: 'movie' },
+            { name: 'Animation', genreId: 16, type: 'movie' },
+            { name: 'Anime', genreId: 16, lang: 'ja', type: 'tv' },
+            { name: 'TV Series', type: 'tv' }
+        ];
+
+        const catWrapper = document.getElementById('catWrapper');
+        const grid = document.getElementById('grid');
+        const loader = document.getElementById('loader');
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const modal = document.getElementById('videoModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const streamIframe = document.getElementById('streamIframe');
+        const pauseBanner = document.getElementById('pauseBanner');
+        const volumeBadge = document.getElementById('volumeBadge');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const volumeBtn = document.getElementById('volumeBtn');
+        const rewindBtn = document.getElementById('rewindBtn');
+        const forwardBtn = document.getElementById('forwardBtn');
+        const serverSelect = document.getElementById('serverSelect');
+        const epControls = document.getElementById('epControls');
+        const seasonSelect = document.getElementById('seasonSelect');
+        const episodeSelect = document.getElementById('episodeSelect');
+        const fullScreenBtn = document.getElementById('fullScreenBtn');
+        const closeModal = document.getElementById('closeModal');
+
+        let activeMedia = null;
+        let isPaused = false;
+        let isMuted = false;
+
+        categories.forEach((cat, index) => {
+            const btn = document.createElement('button');
+            btn.className = `cat-btn ${index === 0 ? 'active' : ''}`;
+            btn.textContent = cat.name;
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                searchInput.value = '';
+                fetchCategoryData(cat);
+            });
+            catWrapper.appendChild(btn);
+        });
+
+        async function searchMedia(query) {
+            if (!query.trim()) return;
+            grid.innerHTML = '';
+            loader.style.display = 'block';
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+
+            const url = `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`;
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Search error");
+                const data = await response.json();
+                loader.style.display = 'none';
+
+                const results = data.results
+                    .filter(item => item.media_type === 'movie' || item.media_type === 'tv')
+                    .map(item => ({
+                        id: item.id,
+                        title: item.title || item.name,
+                        img: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'https://via.placeholder.com/500x750',
+                        year: (item.release_date || item.first_air_date || '').split('-')[0] || 'N/A',
+                        rating: (item.vote_average || 0).toFixed(1),
+                        mediaType: item.media_type
+                    }));
+
+                if (results.length === 0) {
+                    loader.textContent = "No results found for that search query.";
+                    loader.style.display = 'block';
+                } else {
+                    renderItems(results);
+                }
+            } catch (err) {
+                loader.textContent = "Search failed. Check your network connection.";
+                loader.style.display = 'block';
+            }
+        }
+
+        searchBtn.addEventListener('click', () => searchMedia(searchInput.value));
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') searchMedia(searchInput.value);
+        });
+
+        async function fetchCategoryData(cat) {
+            grid.innerHTML = '';
+            loader.style.display = 'block';
+
+            let url = '';
+            if (cat.type === 'trending') {
+                url = `https://api.themoviedb.org/3/trending/all/week?api_key=${TMDB_API_KEY}`;
+            } else if (cat.genreId) {
+                const langFilter = cat.lang ? `&with_original_language=${cat.lang}` : '';
+                url = `https://api.themoviedb.org/3/discover/${cat.type}?api_key=${TMDB_API_KEY}&with_genres=${cat.genreId}${langFilter}&sort_by=popularity.desc`;
+            } else {
+                url = `https://api.themoviedb.org/3/trending/${cat.type}/week?api_key=${TMDB_API_KEY}`;
+            }
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("API error");
+                const data = await response.json();
+                loader.style.display = 'none';
+
+                renderItems(data.results.map(item => ({
+                    id: item.id,
+                    title: item.title || item.name,
+                    img: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'https://via.placeholder.com/500x750',
+                    year: (item.release_date || item.first_air_date || '').split('-')[0] || 'N/A',
+                    rating: (item.vote_average || 0).toFixed(1),
+                    mediaType: item.media_type || (cat.type === 'tv' || item.first_air_date ? 'tv' : 'movie')
+                })));
+            } catch (err) {
+                loader.textContent = "Failed to load TMDB media. Check connection.";
+            }
+        }
+
+        function renderItems(items) {
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <img class="card-img" src="${item.img}" alt="${item.title}">
+                    <div class="play-overlay">
+                        <div class="play-btn"><div class="play-icon"></div></div>
+                    </div>
+                    <div class="card-info">
+                        <span class="badge">? ${item.rating}</span>
+                        <h2 class="title">${item.title}</h2>
+                        <div class="meta">${item.year} • ${item.mediaType.toUpperCase()}</div>
+                    </div>
+                `;
+
+                card.addEventListener('click', () => openPlayer(item));
+                grid.appendChild(card);
+            });
+        }
+
+        function populateDropdowns() {
+            seasonSelect.innerHTML = '';
+            for (let s = 1; s <= 10; s++) {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = `Season ${s}`;
+                seasonSelect.appendChild(opt);
+            }
+
+            episodeSelect.innerHTML = '';
+            for (let e = 1; e <= 25; e++) {
+                const opt = document.createElement('option');
+                opt.value = e;
+                opt.textContent = `Ep ${e}`;
+                episodeSelect.appendChild(opt);
+            }
+        }
+
+        function getEmbedUrl(media, serverKey, season, episode) {
+            const isTv = media.mediaType === 'tv';
+
+            switch(serverKey) {
+                case 'vidsrc_me':
+                    return isTv 
+                        ? `https://vidsrc.me/embed/tv?tmdb=${media.id}&season=${season}&episode=${episode}`
+                        : `https://vidsrc.me/embed/movie?tmdb=${media.id}`;
+                case 'vidsrc_pro':
+                    return isTv 
+                        ? `https://vidsrc.pro/embed/tv/${media.id}/${season}/${episode}`
+                        : `https://vidsrc.pro/embed/movie/${media.id}`;
+                case 'embedmaster':
+                    return isTv 
+                        ? `https://embedmaster.com/embed/tv/${media.id}/${season}/${episode}`
+                        : `https://embedmaster.com/embed/movie/${media.id}`;
+                case 'embed_2embed':
+                    return isTv 
+                        ? `https://www.2embed.cc/embedtv/${media.id}&s=${season}&e=${episode}`
+                        : `https://www.2embed.cc/embed/${media.id}`;
+                default:
+                    return `https://vidsrc.me/embed/movie?tmdb=${media.id}`;
+            }
+        }
+
+        function openPlayer(media) {
+            activeMedia = media;
+            modalTitle.textContent = `Now Playing: ${media.title}`;
+
+            if (media.mediaType === 'tv') {
+                populateDropdowns();
+                epControls.classList.add('visible');
+            } else {
+                epControls.classList.remove('visible');
+            }
+
+            isPaused = false;
+            isMuted = false;
+            updatePauseUI();
+            updateVolumeUI();
+            updateStreamSource();
+            modal.classList.add('active');
+        }
+
+        function updateStreamSource() {
+            if (!activeMedia) return;
+            const season = seasonSelect.value || 1;
+            const episode = episodeSelect.value || 1;
+            const embedUrl = getEmbedUrl(activeMedia, serverSelect.value, season, episode);
+            streamIframe.src = embedUrl;
+        }
+
+        // Volume Toggle Logic
+        function toggleVolume() {
+            isMuted = !isMuted;
+            updateVolumeUI();
+
+            // Send postMessage API commands to stream iframe
+            const command = isMuted ? 'mute' : 'unMute';
+            streamIframe.contentWindow.postMessage(`{"event":"command","func":"${command}","args":""}`, '*');
+            streamIframe.contentWindow.postMessage(`{"event":"command","func":"setVolume","args":[${isMuted ? 0 : 100}]}`, '*');
+        }
+
+        function updateVolumeUI() {
+            if (isMuted) {
+                volumeBtn.textContent = '?? Mute';
+                volumeBadge.textContent = '?? Sound Muted';
+                volumeBadge.classList.add('active');
+            } else {
+                volumeBtn.textContent = '?? Sound';
+                volumeBadge.textContent = '?? Sound Active';
+                volumeBadge.classList.remove('active');
+            }
+        }
+
+        // Playback Control Handlers
+        function togglePause() {
+            isPaused = !isPaused;
+            updatePauseUI();
+            const msg = isPaused ? 'pause' : 'play';
+            streamIframe.contentWindow.postMessage(`{"event":"command","func":"${msg}Video","args":""}`, '*');
+        }
+
+        function updatePauseUI() {
+            if (isPaused) {
+                playPauseBtn.textContent = '? Resume';
+                streamIframe.classList.add('paused');
+                pauseBanner.classList.add('active');
+            } else {
+                playPauseBtn.textContent = '? Pause';
+                streamIframe.classList.remove('paused');
+                pauseBanner.classList.remove('active');
+            }
+        }
+
+        function seekVideo(seconds) {
+            const currentSrc = streamIframe.src;
+            streamIframe.src = currentSrc;
+        }
+
+        volumeBtn.addEventListener('click', toggleVolume);
+        playPauseBtn.addEventListener('click', togglePause);
+        pauseBanner.addEventListener('click', togglePause);
+        rewindBtn.addEventListener('click', () => seekVideo(-10));
+        forwardBtn.addEventListener('click', () => seekVideo(10));
+
+        serverSelect.addEventListener('change', updateStreamSource);
+        seasonSelect.addEventListener('change', updateStreamSource);
+        episodeSelect.addEventListener('change', updateStreamSource);
+
+        fullScreenBtn.addEventListener('click', () => {
+            if (streamIframe.requestFullscreen) {
+                streamIframe.requestFullscreen();
+            } else if (streamIframe.webkitRequestFullscreen) {
+                streamIframe.webkitRequestFullscreen();
+            }
+        });
+
+        function closePlayer() {
+            streamIframe.src = "about:blank";
+            modal.classList.remove('active');
+            activeMedia = null;
+            isPaused = false;
+            isMuted = false;
+            updatePauseUI();
+            updateVolumeUI();
+        }
+
+        closeModal.addEventListener('click', closePlayer);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closePlayer();
+        });
+
+        // Keyboard Shortcuts
+        window.addEventListener('keydown', (e) => {
+            if (!modal.classList.contains('active')) return;
+
+            if (e.code === 'KeyM') {
+                e.preventDefault();
+                toggleVolume();
+            } else if (e.code === 'Space' || e.code === 'KeyK') {
+                e.preventDefault();
+                togglePause();
+            } else if (e.code === 'ArrowRight' || e.code === 'KeyL') {
+                seekVideo(10);
+            } else if (e.code === 'ArrowLeft' || e.code === 'KeyJ') {
+                seekVideo(-10);
+            } else if (e.code === 'KeyF') {
+                fullScreenBtn.click();
+            } else if (e.code === 'Escape') {
+                closePlayer();
+            }
+        });
+
+        fetchCategoryData(categories[0]);
+    </script>
+</body>
+</html>
